@@ -151,7 +151,7 @@
             var customIcon = L.divIcon({ html: iconHtml, className: 'custom-school-icon', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -15] });
             var marker = L.marker([school.lat, school.lng], { icon: customIcon }).addTo(map);
             
-            // 1. FIXED: Correct Google Maps direction URL
+            // 1. FIXED: Added the correct Google Maps API structure right here
             var popupContent = `
                 <div class='badge' style='background-color: ${school.color}'>School Info</div>
                 <div class='popup-title'><b>${school.name}</b></div>
@@ -174,7 +174,7 @@
             var customIcon = L.divIcon({ html: iconHtml, className: 'custom-partner-icon', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -15] });
             var marker = L.marker([partner.lat, partner.lng], { icon: customIcon }).addTo(map);
             
-            // 2. FIXED: Correct Google Maps direction URL
+            // 2. FIXED: Added the correct Google Maps API structure right here
             var popupContent = `
                 <div class='badge' style='background-color: ${partnerColor}'>Partner</div>
                 <div class='popup-title'><b>${partner.name}</b></div>
