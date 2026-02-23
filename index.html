@@ -42,7 +42,7 @@
 </head>
 <body>
 
-    <h2>SDO San Juan City SHS & Partner-Industries Map</h2>
+    <h2>SDO San Juan City Senior High School <br> & Partner-Industries Map</h2>
     
     <div class="search-container">
         <input type="text" id="schoolSearch" list="search-options" placeholder="Search for a school or partner...">
@@ -65,7 +65,7 @@
         }).addTo(map);
 
         var schools = [
-            { id: "305423", name: "San Juan National High School", lat: 14.60558314, lng: 121.0294749, programs: "Junior High (Grades 7-10)", address: "P. Narciso St., San Juan City", color: "#4285F4" },
+            { id: "305423", name: "San Juan National High School", lat: 14.60558314, lng: 121.0294749, programs: "Junior - Senior High School (Grades 7-12)", address: "P. Narciso St., San Juan City", color: "#4285F4" },
             { id: "305607", name: "San Juan City Science High School", lat: 14.60369204, lng: 121.0314835, programs: "Science Curriculum (JHS & SHS)", address: "29 Pinaglabanan St., San Juan City", color: "#34A853" },
             { id: "305608", name: "San Juan City Academic Senior High School", lat: 14.60699842, lng: 121.0225635, programs: "SHS Academic Tracks", address: "N. Domingo cor. A. Luna St., San Juan City", color: "#9C27B0" },
             { id: "305607", name: "San Juan City TVL Senior High School", lat: 14.60327769, lng: 121.0293973, programs: "SHS TVL Tracks", address: "Dr. A. Ejercito cor Jose Gil Street Brgy. Tibagan, San Juan City", color: "#EA4335" }
@@ -151,13 +151,14 @@
             var customIcon = L.divIcon({ html: iconHtml, className: 'custom-school-icon', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -15] });
             var marker = L.marker([school.lat, school.lng], { icon: customIcon }).addTo(map);
             
-            // 1. FIXED: Added the correct Google Maps API structure right here
+            // UPDATED: "Programs" text is now "Curricular Offerings"
+            // FIXED: Google Maps API route structure
             var popupContent = `
                 <div class='badge' style='background-color: ${school.color}'>School Info</div>
                 <div class='popup-title'><b>${school.name}</b></div>
                 <div class='popup-id'>School ID: ${school.id}</div>
                 <div class='popup-address'><i class="fa-solid fa-location-dot" style="color: #ea4335;"></i> ${school.address}</div>
-                <div class='popup-programs'><b>Programs:</b> ${school.programs}</div>
+                <div class='popup-programs'><b>Curricular Offerings:</b> ${school.programs}</div>
                 <a href="https://www.google.com/maps/dir/?api=1&destination=${school.lat},${school.lng}" target="_blank" class="btn-directions" style="background-color: ${school.color};">
                     <i class="fa-solid fa-route"></i> Get Directions
                 </a>
@@ -174,7 +175,7 @@
             var customIcon = L.divIcon({ html: iconHtml, className: 'custom-partner-icon', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -15] });
             var marker = L.marker([partner.lat, partner.lng], { icon: customIcon }).addTo(map);
             
-            // 2. FIXED: Added the correct Google Maps API structure right here
+            // FIXED: Google Maps API route structure
             var popupContent = `
                 <div class='badge' style='background-color: ${partnerColor}'>Partner</div>
                 <div class='popup-title'><b>${partner.name}</b></div>
