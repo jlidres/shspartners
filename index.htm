@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>San Juan City SHS & Partners Map</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #333; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        h2 { color: #2c3e50; margin-bottom: 20px; text-align: center; }
+
+        .search-container { width: 100%; max-width: 900px; margin-bottom: 15px; display: flex; justify-content: center; gap: 10px; }
+        #schoolSearch { width: 100%; max-width: 400px; padding: 12px 20px; font-size: 16px; border: 1px solid #ccc; border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.3s; }
+        #schoolSearch:focus { border-color: #1a73e8; }
+
+        #resetViewBtn { padding: 12px 18px; font-size: 18px; background-color: #fff; color: #555; border: 1px solid #ccc; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.2s; }
+        #resetViewBtn:hover { background-color: #f1f3f4; color: #1a73e8; border-color: #1a73e8; }
+
+        #schoolMap { height: 550px; width: 100%; max-width: 900px; border: none; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); z-index: 1; margin-bottom: 40px; }
+
+        .custom-school-icon, .custom-partner-icon { display: flex; justify-content: center; align-items: center; font-size: 24px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        .leaflet-popup-content-wrapper { border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .leaflet-popup-content { margin: 16px; line-height: 1.5; }
+        .popup-title { font-size: 1.1em; color: #1a73e8; margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+        
+        .popup-id { font-size: 0.8em; color: #888; font-family: monospace; margin-bottom: 8px; }
+        .popup-address { font-size: 0.85em; color: #666; margin-bottom: 8px; }
+        .popup-programs { font-size: 0.9em; color: #555; margin-bottom: 4px; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; font-weight: 600; color: white; margin-bottom: 8px; }
+        
+        .btn-directions { display: inline-block; width: 100%; padding: 8px 0; background-color: #1a73e8; color: white !important; text-decoration: none; border-radius: 6px; font-size: 0.9em; font-weight: 600; text-align: center; transition: background-color 0.2s; box-sizing: border-box; margin-top: 8px; }
+        .btn-directions:hover { filter: brightness(90%); }
+
+        .info.legend { background: white; padding: 10px 14px; font-size: 13px; line-height: 22px; color: #555; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .info.legend h4 { margin: 0 0 8px 0; color: #333; font-size: 14px; }
+        .info.legend i { width: 20px; text-align: center; margin-right: 6px; font-size: 15px; }
+
+        /* NEW CSS: Styling for the detailed information section below the map */
+        .info-section {
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 40px;
+        }
+        
+        .info-section h3 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 1.5em;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Automatically makes columns responsive */
+            gap: 20px;
+        }
+
+        .school-card {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-top: 6px solid #ccc; /* Placeholder border, will be overridden by inline styles */
+        }
+
+        .school-card h4 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+            color: #333;
+        }
+
+        .school-card p {
+            margin: 0 0 10px 0;
+            font-size: 0.95em;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .school-card ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 0.95em;
+            color: #444;
+        }
+
+        .school-card ul li {
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>SDO San Juan Senior High School <br>& Partner-Industries Map</h2>
+    
+    <div class="search-container">
+        <input type="text" id="schoolSearch" list="search-options" placeholder="Search for a school or partner...">
+        <datalist id="search-options"></datalist>
+        <button id="resetViewBtn" title="Reset Map View"><i class="fa-solid fa-arrow-rotate-left"></i></button>
+    </div>
+
+    <div id="schoolMap"></div>
+
+    <div class="info-section">
+        <h3>Detailed Curricular Offerings</h3>
+        <div class="cards-grid">
+            
+            <div class="school-card" style="border-top-color: #4285F4;">
+                <h4><i class="fa-solid fa-school" style="color: #4285F4;"></i> San Juan National High School</h4>
+                <p><b>Curricular Offerings:</b></p>
+                <ul>
+                    <li>Junior - Senior High School (Grades 7-12)</li>
+                    <li>Basic Education Curriculum</li>
+                </ul>
+                <p><b>Track:</b></p>
+                <ul>
+                    <li>Academic</li>
+                </ul>
+                <p><b>Cluster of Electives:</b></p>
+                <ul>
+                    <li>Social Science & Humanities</li>
+                </ul>
+                
+            </div>
+
+            <div class="school-card" style="border-top-color: #34A853;">
+                <h4><i class="fa-solid fa-school" style="color: #34A853;"></i> San Juan City Science High School</h4>
+                <p><b>Curricular Offerings:</b></p>
+                <ul>
+                    <li>Special Science Curriculum (JHS & SHS)</li>
+                </ul>
+                <p><b>Track: </b></p>
+                <ul>
+                    <li>Academic</li>
+                </ul>
+                <p><b>Cluster of Electives:</b></p>
+                <ul>
+                    <li>STEM (Science, Technology, Engineering, and Mathematics)</li>
+                </ul>
+            </div>
+
+            <div class="school-card" style="border-top-color: #9C27B0;">
+                <h4><i class="fa-solid fa-school" style="color: #9C27B0;"></i> San Juan City Academic Senior High School</h4>
+                  <p><b>Curricular Offerings</b></p>
+                <ul>
+                    <li>ABM Strand (Accountancy, Business, and Management)</li>
+                    <li>HUMSS Strand (Humanities and Social Sciences)</li>
+                    <li>GAS (General Academic Strand)</li>
+                </ul>
+       
+                </ul>
+                <p><b>Track:</b></p>
+                <ul>
+                    <li>Academic</li>
+                </ul>
+                <p><b>Cluster of Electives:</b></p>
+                <ul>
+                    <li>Arts, Social Science & Humanities</li>
+                    <li>Business & Entrepreneurship</li>
+                    <li>STEM (Science, Technology, Engineering, and Mathematics)</li>
+                    <li>Sports, Health and Wellness</li>
+                    <li>Field Experience</li>
+                    <li>General Academic</li>
+                </ul>
+            </div>
+
+            <div class="school-card" style="border-top-color: #EA4335;">
+                <h4><i class="fa-solid fa-school" style="color: #EA4335;"></i> San Juan City TVL Senior High School</h4>
+                <p><b>Curricular Offerings:</b></p>
+                <ul>
+                    <li>Cookery / Food and Beverage Services (FBS)</li>
+                    <li>Computer Systems Servicing / Technical Drafting</li>
+                    <li>Electrical Installation and Maintenance</li>
+                    <li>Tourism & Caregiving</li>
+                </ul>
+                
+                 </ul>
+                <p><b>Track:</b></p>
+                <ul>
+                    <li>TechPro</li>
+                </ul>
+                <p><b>Cluster of Electives:</b></p>
+                <ul>
+                    <li>Hospitality & Tourism</li>
+                    <li>Aesthetics, Wellness and Human Care</li>
+                    <li>Agri-Fishery Business and Food Innovation</li>
+                    <li>Creative Arts and Design Technology</li>
+                    <li>Industrial Technologies</li>
+                    <li>ICT Support and Computer Programming Technologies</li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script>
+        // The entire map logic remains exactly the same!
+        var defaultCenter = [14.6042, 121.0300];
+        var defaultZoom = 14;
+        var map = L.map('schoolMap').setView(defaultCenter, defaultZoom);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        var schools = [
+            { id: "305423", name: "San Juan National High School", lat: 14.60558314, lng: 121.0294749, programs: "Junior High (Grades 7-10)", address: "P. Narciso St., San Juan City", color: "#4285F4" },
+            { id: "305607", name: "San Juan City Science High School", lat: 14.60369204, lng: 121.0314835, programs: "Science Curriculum (JHS & SHS)", address: "29 Pinaglabanan St., San Juan City", color: "#34A853" },
+            { id: "305608", name: "San Juan City Academic Senior High School", lat: 14.60699842, lng: 121.0225635, programs: "SHS Academic Tracks", address: "N. Domingo cor. A. Luna St., San Juan City", color: "#9C27B0" },
+            { id: "305607", name: "San Juan City TVL Senior High School", lat: 14.60327769, lng: 121.0293973, programs: "SHS TVL Tracks", address: "Dr. A. Ejercito cor Jose Gil Street Brgy. Tibagan, San Juan City", color: "#EA4335" }
+        ];
+
+        var partners = [
+            { name: "MICROCADD INSTITUTE INC.", industry: "CONSTRUCTION/ ENGINEERING/ TRAINING INDUSTRY", trackStrand: "STEM", city: "Quezon City", lat: 14.620308638416121, lng: 121.04931424478127 },
+            { name: "SAN JUAN CITY POST OFFICE", industry: "POSTAL SERVICE INDUSTRY", trackStrand: "GENERAL ACADEMIC STRAND", city: "San Juan City", lat: 14.605354546021823, lng: 121.03169628633795 },
+            { name: "LGU - SAN JUAN MEDICAL CENTER", industry: "HEALTHCARE", trackStrand: "STEM/ ABM/ GAS", city: "San Juan City", lat: 14.60638830990722, lng: 121.02337375201989 },
+            { name: "OUR LADY OF LOURDES HOSPITAL", industry: "HEALTHCARE", trackStrand: "STEM", city: "Manila City", lat: 14.594974524324316, lng: 121.02254739955346 },
+            { name: "PHILIPPINE RED CROSS SAN JUAN", industry: "HEALTHCARE", trackStrand: "STEM", city: "San Juan City", lat: 14.605546082822395, lng: 121.03338642506247 },
+            { name: "PNP - SAN JUAN", industry: "LAW ENFORCEMENT", trackStrand: "GAS / HUMSS", city: "San Juan City", lat: 14.60943032483538, lng: 121.02989437912498 },
+            { name: "COMELEC - SAN JUAN", industry: "INDEPENDENT COMMISSION - ELECTION PROCEDURES", trackStrand: "HUMSS", city: "San Juan City", lat: 14.603947502643935, lng: 121.02740835328044 },
+            { name: "MUSEO-EL DEPOSITO", industry: "CULTURE AND HERITAGE", trackStrand: "HUMSS", city: "San Juan City", lat: 14.604248158545873, lng: 121.03178449355175 },
+            { name: "PHLPOST, SAN JUAN", industry: "POSTAL, COURIER,LOGISTICS", trackStrand: "HUMSS/ABM/GAS", city: "San Juan City", lat: 14.606808329513719, lng: 121.03201934139182 },
+            { name: "BIR - SAN JUAN", industry: "TAXATION", trackStrand: "ABM", city: "San Juan City", lat: 14.601056470919286, lng: 121.02814376998839 },
+            { name: "KOKURYU COSMETICS", industry: "COSMETICS", trackStrand: "ABM", city: "San Juan City", lat: 14.606560337696541, lng: 121.02470544726154 },
+            { name: "BRGY. BALONG-BATO", industry: "GOVERNMENT & PUBLIC SERVICE", trackStrand: "ABM / GAS", city: "San Juan City", lat: 14.608393019021717, lng: 121.02346496869572 },
+            { name: "BRGY. ISABELITA LGU", industry: "GOVERNMENT & PUBLIC SERVICE", trackStrand: "HUMSS", city: "San Juan City", lat: 14.603726054322356, lng: 121.03071873680827 },
+            { name: "BRGY. ONSE LGU", industry: "GOVERNMENT & PUBLIC SERVICE", trackStrand: "HUMSS", city: "San Juan City", lat: 14.601720526019788, lng: 121.03135101731176 },
+            { name: "CENTURY SEA FOOD RESTAURANT", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.60144085869545, lng: 121.04114029927376 },
+            { name: "CHILI'S (San Juan City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.602041861216758, lng: 121.05230429942067 },
+            { name: "CHILI'S (Pasig City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Pasig City", lat: 14.592424590961073, lng: 121.05759698239328 },
+            { name: "CHILI'S (Mandaluyong City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Mandaluyong City", lat: 14.585623074935194, lng: 121.05617490992584 },
+            { name: "CHOW DYNASTY", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.602188413441207, lng: 121.04878123997828 },
+            { name: "CLASSIC SAVORY RESTAURANT", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.60274222198351, lng: 121.04716969973705 },
+            { name: "ERNS KAINAN", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.603738691067267, lng: 121.0308229747357 },
+            { name: "GERRY'S GRILL", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Robinson Galleria", lat: 14.592506211384014, lng: 121.05971772095305 },
+            { name: "GLORIA MARIS RESTAURANT", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.60415795536883, lng: 121.04682749206403 },
+            { name: "GYUKAKO (San Juan City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.605729646131826, lng: 121.04819771993824 },
+            { name: "GYUKAKO (Mandaluyong City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Mandaluyong City", lat: 14.583649783150118, lng: 121.05282148703672 },
+            { name: "KHAO KHAI", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.604910834566937, lng: 121.03248830822997 },
+            { name: "MAMA LOU’S ITALIAN KITCHEN", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Pasig City", lat: 14.591844116642475, lng: 121.0581217410258 },
+            { name: "SHIN MANN HANN", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.60082126065914, lng: 121.03812629283344 },
+            { name: "MANN HANN CHINESE RESTAURANT (Quezon City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Quezon City", lat: 14.615938808826131, lng: 121.04020684116188 },
+            { name: "MANN HANN CHINESE RESTAURANT (Manila City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Manila City", lat: 14.606207349450344, lng: 121.0187753355261 },
+            { name: "MANN HANN RESTAURANT", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Pasig City", lat: 14.592112851793406, lng: 121.06093715230767 },
+            { name: "MOON RABBIT", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.607887689481219, lng: 121.03467902761547 },
+            { name: "MESA RESTAURANT (Quezon City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Quezon City", lat: 14.615519847858886, lng: 121.03996928630168 },
+            { name: "MESA RESTAURANT (San Juan City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.601437897680501, lng: 121.05083571363369 },
+            { name: "Nikkei Nama Bar Shangri La", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Mandaluyong City", lat: 14.580953595841734, lng: 121.05531326660858 },
+            { name: "PHO-HOA & MY THAI", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.597232643156602, lng: 121.03832119774158 },
+            { name: "SIBYULEE", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.603373113876387, lng: 121.05270490289234 },
+            { name: "SHAKEY’S PIZZA PARLOR (Quezon City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Quezon City", lat: 14.61469000303714, lng: 121.03990334227969 },
+            { name: "SHAKEY’S PIZZA PARLOR (Pasig City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Pasig City", lat: 14.591270490606986, lng: 121.06032020015292 },
+            { name: "SHAKEY’S PIZZA PARLOR (San Juan City)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "San Juan City", lat: 14.600768842764825, lng: 121.05010645898032 },
+            { name: "SHAKEY’S PIZZA PARLOR (Manila City 1)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Manila City", lat: 14.594973566413147, lng: 121.02452258660244 },
+            { name: "SHAKEY’S PIZZA PARLOR (Manila City 2)", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Manila City", lat: 14.603463146495695, lng: 121.01613377307993 },
+            { name: "TGI FRIDAY’S", industry: "FOOD AND BEVERAGE INDUSTRY", trackStrand: "COOKERY/FBS", city: "Robinson Galleria", lat: 14.590845458264214, lng: 121.06022607404984 },
+            { name: "XPT TRAVEL AND TOURS", industry: "TOURISM INDUSTRY", trackStrand: "TOURISM", city: "Mandaluyong City", lat: 14.581741685508065, lng: 121.04693347338892 },
+            { name: "RELI TOURS AND TRAVEL", industry: "TOURISM INDUSTRY", trackStrand: "TOURISM", city: "Pasig City", lat: 14.5918258713564, lng: 121.05956654114513 },
+            { name: "MAD SUN TRAVEL AND TOURS", industry: "TOURISM INDUSTRY", trackStrand: "TOURISM", city: "Quezon City", lat: 14.623718424220215, lng: 121.05223223375715 },
+            { name: "Town & Country Hotel", industry: "TOURISM INDUSTRY", trackStrand: "TOURISM", city: "Manila City", lat: 14.59791628235571, lng: 121.01780835058673 },
+            { name: "WOW BUDGET HOTEL", industry: "TOURISM INDUSTRY", trackStrand: "TOURISM", city: "Quezon City", lat: 14.620725754078775, lng: 121.04875848242766 },
+            { name: "LGCT TRAVEL & TOURS Inc.", industry: "TOURISM INDUSTRY", trackStrand: "TOURISM", city: "San Juan City", lat: 14.593891312926996, lng: 121.03822135579452 },
+            { name: "GAKKEN PHILIPPINES", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "San Juan City", lat: 14.609893413714323, lng: 121.02375415856318 },
+            { name: "DIVISION OFFICE OF SAN JUAN", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "San Juan City", lat: 14.604681686177853, lng: 121.02897165450113 },
+            { name: "PC-FACTORY", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "Quezon City", lat: 14.613459259350941, lng: 121.03541936609788 },
+            { name: "GOLDTECH INTERNATIONAL DISTRIBUTORS INC.", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "San Juan City", lat: 14.610485157351587, lng: 121.03154112572635 },
+            { name: "XT PRO COMPUTER", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "San Juan City", lat: 14.603565523999285, lng: 121.0519714495688 },
+            { name: "QURIO MANILA", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "Quezon City", lat: 14.631928244550187, lng: 121.0307590010842 },
+            { name: "ASIA COMPUTER, ASIA BUSINESS COMPUTER SALES UNLIMITED CORP.", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "San Juan City", lat: 14.602633611532779, lng: 121.05014325229793 },
+            { name: "ABC – ADDSOME BUSINESS CORP", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "San Juan City", lat: 14.602374608371248, lng: 121.05025138239819 },
+            { name: "AHEAD BIZ COMPUTER SALES AND REPAIR SERVICES", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "San Juan City", lat: 14.602244500771805, lng: 121.05047855951086 },
+            { name: "PAG-IBIG FUND MAKATI CITY", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "Makati City", lat: 14.561930991654437, lng: 121.01438329888926 },
+            { name: "WE PRINT PRINTS SHOP", industry: "INFORMATION, COMMUNICATION AND TECHNOLOGY", trackStrand: "COMPUTER SYSTEM SERVICING/ TECHNOCAL DRAFTING", city: "San Juan City", lat: 14.607071813864229, lng: 121.02282530027433 },
+            { name: "MIISIONARIES OF CHARITY", industry: "HEALTH CARE", trackStrand: "CAREGIVING", city: "Manila City", lat: 14.6174204613193, lng: 120.9754978321803 },
+            { name: "CANOSIAN DAUUGHTERS OF CHARITY", industry: "HEALTH CARE", trackStrand: "CAREGIVING", city: "San Juan City", lat: 14.607592885543587, lng: 121.03503014266293 },
+            { name: "POWERAIRE AIRCONDITIONING AND AIRWORKS", industry: "CONSTRUCTION/ ENGINEERING/ TRAINING INDUSTRY", trackStrand: "ELECTRICAL INSTALLATION AND MAINTENANCE", city: "San Juan City", lat: 14.600908964104006, lng: 121.04748838641825 },
+            { name: "FL PRO SOLUTIONS INC.", industry: "CONSTRUCTION/ ENGINEERING/ TRAINING INDUSTRY", trackStrand: "ELECTRICAL INSTALLATION AND MAINTENANCE", city: "San Juan City", lat: 14.605716282046805, lng: 121.02957553909566 },
+            { name: "AM – PHIL FOOD CONCEPTS, INC.", industry: "CONSTRUCTION/ ENGINEERING/ TRAINING INDUSTRY", trackStrand: "ELECTRICAL INSTALLATION AND MAINTENANCE", city: "San Juan City", lat: 14.604782290775207, lng: 121.05316024164365 }
+        ];
+
+        var datalist = document.getElementById('search-options');
+        var searchInput = document.getElementById('schoolSearch');
+        var resetBtn = document.getElementById('resetViewBtn');
+
+        var allSearchableLocations = [];
+
+        schools.forEach(function(school) {
+            var iconHtml = `<i class="fa-solid fa-school" style="color: ${school.color};"></i>`;
+            var customIcon = L.divIcon({ html: iconHtml, className: 'custom-school-icon', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -15] });
+            var marker = L.marker([school.lat, school.lng], { icon: customIcon }).addTo(map);
+            
+            var popupContent = `
+                <div class='badge' style='background-color: ${school.color}'>School Info</div>
+                <div class='popup-title'><b>${school.name}</b></div>
+                <div class='popup-id'>School ID: ${school.id}</div>
+                <div class='popup-address'><i class="fa-solid fa-location-dot" style="color: #ea4335;"></i> ${school.address}</div>
+                <div class='popup-programs'><b>Curricular Offerings:</b> ${school.programs}</div>
+                <a href="http://maps.google.com/maps?q=${school.lat},${school.lng}" target="_blank" class="btn-directions" style="background-color: ${school.color};">
+                    <i class="fa-solid fa-route"></i> Get Directions
+                </a>
+            `;
+            marker.bindPopup(popupContent);
+            
+            allSearchableLocations.push({ name: school.name, lat: school.lat, lng: school.lng, marker: marker });
+        });
+
+        var partnerColor = "#FF9800"; 
+        partners.forEach(function(partner) {
+            var iconHtml = `<i class="fa-solid fa-handshake" style="color: ${partnerColor};"></i>`;
+            var customIcon = L.divIcon({ html: iconHtml, className: 'custom-partner-icon', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -15] });
+            var marker = L.marker([partner.lat, partner.lng], { icon: customIcon }).addTo(map);
+            
+            var popupContent = `
+                <div class='badge' style='background-color: ${partnerColor}'>Partner</div>
+                <div class='popup-title'><b>${partner.name}</b></div>
+                <div class='popup-address'><i class="fa-solid fa-location-dot" style="color: #ea4335;"></i> ${partner.city}</div>
+                <div class='popup-programs'><b>Industry:</b> ${partner.industry}</div>
+                <div class='popup-programs'><b>Track/Strand:</b> ${partner.trackStrand}</div>
+                <a href="http://maps.google.com/maps?q=${partner.lat},${partner.lng}" target="_blank" class="btn-directions" style="background-color: ${partnerColor};">
+                    <i class="fa-solid fa-route"></i> Get Directions
+                </a>
+            `;
+            marker.bindPopup(popupContent);
+            
+            allSearchableLocations.push({ name: partner.name, lat: partner.lat, lng: partner.lng, marker: marker });
+        });
+
+        allSearchableLocations.forEach(function(location) {
+            var option = document.createElement('option');
+            option.value = location.name;
+            datalist.appendChild(option);
+        });
+
+        searchInput.addEventListener('input', function(e) {
+            var typedText = e.target.value;
+            var matchedLocation = allSearchableLocations.find(function(loc) { return loc.name === typedText; });
+
+            if (matchedLocation) {
+                map.flyTo([matchedLocation.lat, matchedLocation.lng], 18, { animate: true, duration: 1.5 });
+                matchedLocation.marker.openPopup();
+                searchInput.value = '';
+                searchInput.blur();
+            }
+        });
+
+        resetBtn.addEventListener('click', function() {
+            map.flyTo(defaultCenter, defaultZoom, { animate: true, duration: 1.5 });
+            map.closePopup();
+            searchInput.value = '';
+        });
+
+        var nominatimUrl = "https://nominatim.openstreetmap.org/search.php?q=San+Juan+City,+Metro+Manila,+Philippines&polygon_geojson=1&format=json";
+        fetch(nominatimUrl)
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data && data.length > 0) {
+                    var cityBoundary = data[0].geojson;
+                    L.geoJSON(cityBoundary, { style: { color: "#2c3e50", weight: 3, opacity: 0.7, fillOpacity: 0.05, dashArray: '8, 6' } }).addTo(map);
+                }
+            });
+
+        var legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML = `
+                <h4>Map Legend</h4>
+                <i class="fa-solid fa-school" style="color: #4285F4;"></i> San Juan National High School<br>
+                <i class="fa-solid fa-school" style="color: #34A853;"></i> San Juan City Science High School<br>
+                <i class="fa-solid fa-school" style="color: #9C27B0;"></i> San Juan City Academic SHS<br>
+                <i class="fa-solid fa-school" style="color: #EA4335;"></i> San Juan City TVL SHS<br>
+                <hr style="border: 0; border-top: 1px solid #ddd; margin: 8px 0;">
+                <i class="fa-solid fa-handshake" style="color: #FF9800;"></i> Partner Establishment
+            `;
+            return div;
+        };
+        legend.addTo(map);
+
+    </script>
+
+</body>
+</html>
